@@ -13,6 +13,7 @@ class MarketDataService:
 
     def get_db_connection(self):
         conn = sqlite3.connect(DB_FILE)
+        conn.row_factory = sqlite3.Row
         return conn
     
     def init_db(self):
@@ -115,3 +116,28 @@ class MarketDataService:
             return True
         else:
             return False
+        
+    def get_yearly_summary (self, symbol: str, year: int):
+        conn = self.get_db_connection()
+        cursor = conn.execute(
+            """
+            SELECT
+                MAX(high) AS high,
+                MIN(low) AS low,
+                SUM(volume) AS volume
+            FROM monthly_data
+            WHERE symbol = ? AND year = ?
+            """,
+            (symbol, year),
+        )
+        result = cursor.fetchone()
+        conn.close()
+
+        if result["high"] is None or result["low"] is None or result["volume"] is None:
+            raise ValueError(f"No monthly data available for {symbol} in {year}.")
+
+        return {
+            "high": f"{result['high']}",
+            "low": f"{result['low']}",
+            "volume": str(result["volume"]),
+        }
