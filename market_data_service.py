@@ -1,6 +1,10 @@
 import sqlite3
+from urllib import response
+import requests
 
 DB_FILE = "market_data.db"
+API_URL = "https://www.alphavantage.co/query"
+API_KEY = "EGYL8S6JD25WYKVR"
 
 class MarketDataService:
 
@@ -27,3 +31,19 @@ class MarketDataService:
         conn.commit()
         cursor.close()
         conn.close()
+
+    def fetch_monthly_data(self, symbol: str):
+
+        response = requests.get(
+            API_URL,
+            params={"function": "TIME_SERIES_MONTHLY", "symbol": symbol, "apikey": API_KEY},
+            timeout=10,
+        )
+
+        if response.status_code != 200:
+            print(f"HTTP Error: {response.status_code}")
+            return None
+
+        data = response.json()
+
+        return data
