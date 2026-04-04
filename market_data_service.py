@@ -1,6 +1,9 @@
 import sqlite3
+from unittest import result
 from urllib import response
+from fastapi import HTTPException
 import requests
+from typing import Dict
 
 DB_FILE = "market_data.db"
 API_URL = "https://www.alphavantage.co/query"
@@ -34,6 +37,8 @@ class MarketDataService:
 
     def fetch_monthly_data(self, symbol: str):
 
+        print(f"Fetching data for {symbol}.")
+
         response = requests.get(
             API_URL,
             params={"function": "TIME_SERIES_MONTHLY", "symbol": symbol, "apikey": API_KEY},
@@ -46,4 +51,67 @@ class MarketDataService:
 
         data = response.json()
 
-        return data
+        #print(data.keys())
+
+        if "Error Message" in data:
+            print("API Error:", data["Error Message"])
+            return None
+
+        time_series = data.get("Monthly Time Series")
+
+        if not time_series:
+            print("No monthly data found for symbol:", symbol)
+            return None
+
+        return time_series
+    
+    def store_monthly_data(self, symbol: str, time_series: Dict[str, dict]):
+        conn = self.get_db_connection()
+        rows = []
+        for date_str, values in time_series.items():
+            try:
+                year, month, _ = date_str.split("-")
+                rows.append(
+                    (
+                        symbol,
+                        int(year),
+                        int(month),
+                        values["2. high"],
+                        values["3. low"],
+                        int(values["5. volume"]),
+                    )
+                )
+            except Exception:
+                continue
+
+        if not rows:
+            conn.close()
+            raise Exception("No valid monthly data to store.")
+
+        conn.executemany(
+            """
+            INSERT OR IGNORE INTO monthly_data
+            (symbol, year, month, high, low, volume)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            rows,
+        )
+        conn.commit()
+        conn.close()
+
+    def yearly_data_available(self, symbol: str, year: int):
+        conn = self.get_db_connection()
+        cursor = conn.execute(
+            "SELECT COUNT(1) AS count FROM monthly_data WHERE symbol = ? AND year = ?",
+            (symbol, year),
+        )
+
+        row = cursor.fetchone()
+        conn.close()
+        count = row[0]
+
+        if count > 0:
+            print(f"Data exists for {symbol} in {year}.")
+            return True
+        else:
+            return False
