@@ -47,22 +47,23 @@ class MarketDataService:
         )
 
         if response.status_code != 200:
-            print(f"HTTP Error: {response.status_code}")
-            return None
+            raise HTTPException(
+                status_code=502,
+                detail=f"Failed to fetch data from external API: {response.status_code}",
+            )
 
         data = response.json()
 
-        #print(data.keys())
-
         if "Error Message" in data:
-            print("API Error:", data["Error Message"])
-            return None
+            raise HTTPException(status_code=404, detail="Symbol not found in external API.")
 
         time_series = data.get("Monthly Time Series")
 
         if not time_series:
-            print("No monthly data found for symbol:", symbol)
-            return None
+            raise HTTPException(
+                status_code=502,
+                detail="External API returned unexpected data format.",
+            )
 
         return time_series
     
@@ -87,7 +88,7 @@ class MarketDataService:
 
         if not rows:
             conn.close()
-            raise Exception("No valid monthly data to store.")
+            raise HTTPException(status_code=502, detail="No valid monthly data to store.")
 
         conn.executemany(
             """
@@ -134,7 +135,10 @@ class MarketDataService:
         conn.close()
 
         if result["high"] is None or result["low"] is None or result["volume"] is None:
-            raise ValueError(f"No monthly data available for {symbol} in {year}.")
+            raise HTTPException(
+                status_code=404,
+                detail=f"No monthly data available for {symbol} in {year}.",
+            )
 
         return {
             "high": f"{result['high']}",

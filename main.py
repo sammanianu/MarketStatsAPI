@@ -1,16 +1,26 @@
+from fastapi import FastAPI, HTTPException
+
 from market_data_service import MarketDataService
 
+app = FastAPI()
 market_data_service = MarketDataService() 
-
 market_data_service.init_db()
 
-def get_annual_summary(symbol: str, year: str):
-    if not market_data_service.yearly_data_available(symbol, int(year)):
-        fetched_monthly_data = market_data_service.fetch_monthly_data(symbol)
-        market_data_service.store_monthly_data(symbol, fetched_monthly_data)
+@app.get("/symbols/{symbol}/annual/{year}")
+def get_annual_summary(symbol: str, year: int):
+    try:
+        if not market_data_service.yearly_data_available(symbol, year):
+            fetched_monthly_data = market_data_service.fetch_monthly_data(symbol)
+            if not fetched_monthly_data:
+                raise HTTPException(status_code=404, detail=f"No data found for {symbol}")
+            market_data_service.store_monthly_data(symbol, fetched_monthly_data)
 
-    summary = market_data_service.get_yearly_summary(symbol, int(year))
-    print(f"Annual summary for {symbol} in {year}:{summary}")
-    return summary
+        summary = market_data_service.get_yearly_summary(symbol, year)
+        return summary
 
-#get_annual_summary("AAPL", 2023)
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except TypeError as te:
+        raise HTTPException(status_code=404, detail="No data available in DB")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {e}")
