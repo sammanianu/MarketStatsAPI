@@ -9,6 +9,9 @@ market_data_service.init_db()
 @app.get("/symbols/{symbol}/annual/{year}")
 def get_annual_summary(symbol: str, year: int):
     try:
+        symbol = market_data_service.validate_symbol(symbol)
+        market_data_service.validate_year(year)
+
         if not market_data_service.yearly_data_available(symbol, year):
             fetched_monthly_data = market_data_service.fetch_monthly_data(symbol)
             if not fetched_monthly_data:
@@ -16,6 +19,7 @@ def get_annual_summary(symbol: str, year: int):
             market_data_service.store_monthly_data(symbol, fetched_monthly_data)
 
         summary = market_data_service.get_yearly_summary(symbol, year)
+        
         return summary
 
     except ValueError as ve:

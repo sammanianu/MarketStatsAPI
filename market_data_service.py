@@ -145,3 +145,14 @@ class MarketDataService:
             "low": f"{result['low']}",
             "volume": str(result["volume"]),
         }
+    
+    def validate_year(self, year: int):
+        if year < 1000 or year > 9999:
+            raise HTTPException(status_code=400, detail="Year must be in YYYY format.")
+        
+    
+    def validate_symbol(self, symbol: str):
+        symbol = symbol.strip().upper()
+        if not symbol or not symbol.isalnum():
+            raise HTTPException(status_code=400, detail="Invalid stock symbol.")
+        return symbol
