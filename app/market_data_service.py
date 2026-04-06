@@ -1,13 +1,8 @@
 import sqlite3
-from unittest import result
-from urllib import response
 from fastapi import HTTPException
 import requests
 from typing import Dict
-
-DB_FILE = "market_data.db"
-API_URL = "https://www.alphavantage.co/query"
-API_KEY = "EGYL8S6JD25WYKVR"
+from app.config import DB_FILE, API_URL, API_KEY, API_TIMEOUT
 
 class MarketDataService:
 
@@ -43,7 +38,7 @@ class MarketDataService:
         response = requests.get(
             API_URL,
             params={"function": "TIME_SERIES_MONTHLY", "symbol": symbol, "apikey": API_KEY},
-            timeout=10,
+            timeout=API_TIMEOUT,
         )
 
         if response.status_code != 200:
@@ -146,13 +141,3 @@ class MarketDataService:
             "volume": str(result["volume"]),
         }
     
-    def validate_year(self, year: int):
-        if year < 1000 or year > 9999:
-            raise HTTPException(status_code=400, detail="Year must be in YYYY format.")
-        
-    
-    def validate_symbol(self, symbol: str):
-        symbol = symbol.strip().upper()
-        if not symbol or not symbol.isalnum():
-            raise HTTPException(status_code=400, detail="Invalid stock symbol.")
-        return symbol
