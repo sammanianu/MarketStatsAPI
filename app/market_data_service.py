@@ -22,7 +22,7 @@ class MarketDataService:
                 month INTEGER NOT NULL,
                 high REAL NOT NULL,
                 low REAL NOT NULL,
-                volume INTEGER NOT NULL,
+                volume REAL NOT NULL,
                 UNIQUE(symbol, year, month)
             )
             """
@@ -73,9 +73,9 @@ class MarketDataService:
                         symbol,
                         int(year),
                         int(month),
-                        values["2. high"],
-                        values["3. low"],
-                        int(values["5. volume"]),
+                        float(values["2. high"]),
+                        float(values["3. low"]),
+                        float(values["5. volume"]),
                     )
                 )
             except Exception:
@@ -138,6 +138,6 @@ class MarketDataService:
         return {
             "high": f"{result['high']}",
             "low": f"{result['low']}",
-            "volume": str(result["volume"]),
+            "volume": f"{result['volume']:.0f}",
         }
     
